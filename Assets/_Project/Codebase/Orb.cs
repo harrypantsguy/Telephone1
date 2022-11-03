@@ -1,67 +1,102 @@
-﻿using UnityEngine;
-using Random = UnityEngine.Random;
+﻿using System.Collections.Generic;
+using System.Linq;
+using JetBrains.Annotations;
+using UnityEngine;
 
 namespace _Project.Codebase
 {
-    public class Orb : MonoBehaviour
+    public class Orb : MonoBehaviour, IOrbParent, IDamageable
     {
-        //private bool _attached;
-        private bool Attached => transform.parent != null; // I did this for time, I hate it
-        private Rigidbody2D _rb;
-        private SpriteRenderer _spriteRenderer;
+        [field: SerializeField] public float Radius { get; private set; }
+        [field: SerializeField] public int Health { get; private set; }
+        [field: SerializeField] public bool Attached { get; private set; }
+        [SerializeField] private Rigidbody2D _rb;
+        [SerializeField] private SpriteRenderer _spriteRenderer;
+        [SerializeField] private GameObject _scoreIncreasePrefab;
 
-        public int Health { get; private set; } = 5;
-        
+        public Transform Transform => transform;
+        public List<Orb> DirectChildrenOrbs { get; } = new List<Orb>();
+
+        public int TotalChildOrbCount => DirectChildrenOrbs.Sum(childOrb => childOrb.TotalChildOrbCount) + DirectChildrenOrbs.Count;
+
+        private IOrbParent _parent;
+
+        [UsedImplicitly]
         private void Start()
         {
-            _rb = GetComponent<Rigidbody2D>();
-
-            _spriteRenderer = GetComponent<SpriteRenderer>();
-            _spriteRenderer.color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), 
-                Random.Range(0f, 1f));
+            _spriteRenderer.color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
         }
 
-        private void Update()
+        [UsedImplicitly]
+        private void FixedUpdate()
         {
-            _rb.velocity = new Vector2(Attached ? 0f : -2f, 0f);
-            
+            _rb.velocity = Vector2.left * 2f;
+
             if (_rb.position.x < -10f)
+            {
+                for (var i = DirectChildrenOrbs.Count - 1; i >= 0; i--)
+                    RemoveOrbAsChild(DirectChildrenOrbs[i]);
                 Destroy(gameObject);
+            }
         }
 
-        private void OnDestroy()
+        [UsedImplicitly]
+        private void OnCollisionEnter2D(Collision2D col)
         {
-            if (Attached)
-                Player.Singleton.mass -= 1f;
-            transform.DetachChildren();
+            if (Attached) return;
+
+            if (col.gameObject.TryGetComponent(out IOrbParent orbParent))
+            {
+                orbParent.AddOrbAsChild(this);
+                Attached = true;
+            }
         }
 
-        public void TakeDamage(float damage)
+        public void AddOrbAsChild(in Orb newChildOrb)
         {
-            Health = Mathf.Max(Health - (int)damage, 0);
+            DirectChildrenOrbs.Add(newChildOrb);
+            newChildOrb.SetParent(this);
+        }
+
+        public void RemoveOrbAsChild(in Orb childOrb)
+        {
+            childOrb.SetParent(null);
+            DirectChildrenOrbs.Remove(childOrb);
+        }
+
+        public void SetParent(in IOrbParent parent)
+        {
+            _parent = parent;
+
+            if (_parent == null) return;
+            
+            var offset = (transform.position - parent.Transform.position).normalized * (parent.Radius + Radius);
+            transform.SetParent(parent.Transform);
+            transform.localPosition = offset;
+        }
+
+        public void TakeDamage(in int damage)
+        {
+            Health = Mathf.Max(Health - damage, 0);
+
             if (Health == 0)
-            {
-                if (Attached)
-                    Player.Singleton.mass -= 1f;
-                Destroy(gameObject);
-            }
+                Kill();
         }
 
-        private void OnCollisionEnter2D(Collision2D other)
+        public void Kill()
         {
-            if (other.collider.TryGetComponent(out Player player))
-            {
-                transform.SetParent(player.transform);
-                player.mass += 1f;
-            }
-            else if (other.collider.TryGetComponent(out Orb orb))
-            {
-                if (orb.Attached)
-                {
-                    transform.SetParent(orb.transform);
-                    Player.Singleton.mass += 1f;
-                }
-            }
+            if (_parent != null)
+                _parent.RemoveOrbAsChild(this);
+
+            for (var i = DirectChildrenOrbs.Count - 1; i >= 0; i--)
+                DirectChildrenOrbs[i].Kill();
+
+            ScoreHolder.Singleton.IncreaseScoreBy(1);
+
+            var scoreIncrease = Instantiate(_scoreIncreasePrefab, _rb.position, Quaternion.identity).GetComponent<ScoreIncreaseUI>();
+            scoreIncrease.SetIncrease(1);
+            
+            Destroy(gameObject);
         }
     }
 }
