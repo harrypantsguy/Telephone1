@@ -31,6 +31,8 @@ namespace _Project.Codebase
 
         private void OnDestroy()
         {
+            if (Attached)
+                Player.Singleton.mass -= 1f;
             transform.DetachChildren();
         }
 
@@ -57,6 +59,7 @@ namespace _Project.Codebase
                 if (orb.Attached)
                 {
                     transform.SetParent(orb.transform);
+                    Player.Singleton.mass += 1f;
                 }
             }
         }

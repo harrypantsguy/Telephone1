@@ -33,7 +33,7 @@ namespace _Project.Codebase
             }
             
             _inputVelocity = GameControls.DirectionalInput * DEFAULT_MOVE_SPEED;
-            _rb.velocity = _inputVelocity + new Vector2(-mass * 1.75f, 0f);
+            _rb.velocity = _inputVelocity + new Vector2(-mass, 0f);
 
             Vector2 beamStart = _rb.position, beamEnd;
             
@@ -41,7 +41,6 @@ namespace _Project.Codebase
             RaycastHit2D hit = Physics2D.Raycast(_rb.position, beamDir, DEFAULT_BEAM_LENGTH, 
                 Layers.OrbMask);
 
-            Debug.Log(hit.collider);
             
             if (hit.collider != null && hit.collider.TryGetComponent(out Orb orb))
             {
