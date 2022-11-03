@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace DanonsTools.Plugins.DanonsTools.Utilities
+namespace _Project.Codebase
 {
     public static class Utils
     {

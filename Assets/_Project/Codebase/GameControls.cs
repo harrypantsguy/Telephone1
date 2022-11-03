@@ -9,12 +9,7 @@ namespace _Project.Codebase
         public static readonly KeyBind Down = new KeyBind(KeyCode.S);
         public static readonly KeyBind Left = new KeyBind(KeyCode.A);
         public static readonly KeyBind Right = new KeyBind(KeyCode.D);
-        public static readonly KeyBind PlaceStructure = new KeyBind(KeyCode.Mouse0);
-        public static readonly KeyBind FireDefenses = new KeyBind(KeyCode.F);
-        public static readonly KeyBind FastMoveCamera = new KeyBind(KeyCode.LeftShift);
-        public static readonly KeyBind CancelSelection = new KeyBind(KeyCode.Escape);
-        public static readonly KeyBind RotateStructureLeft = new KeyBind(KeyCode.Q);
-        public static readonly KeyBind RotateStructureRight = new KeyBind(KeyCode.E);
+
         public static float MouseYInput => Input.GetAxisRaw("Mouse Y");
         public static float MouseXInput => Input.GetAxisRaw("Mouse X");
         public static Vector2 MouseInput => new Vector2(MouseXInput, MouseYInput);
