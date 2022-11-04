@@ -7,8 +7,9 @@ namespace _Project.Codebase
     {
         [SerializeField] private GameObject _orbPrefab;
         
-        private const float DEFAULT_SPAWN_RATE = .3f;
+        private const float DEFAULT_SPAWN_RATE = .25f;
 
+        private float _blockedHeight;
         private float _lastSpawnTime;
         private float _lastSpawnHeight;
 
@@ -16,10 +17,13 @@ namespace _Project.Codebase
         {
             _lastSpawnTime = 0f;
             _lastSpawnHeight = 0f;
+            _blockedHeight = 20f;
         } 
 
         private void Update()
         {
+            //_blockedHeight = Mathf.Sin(Time.time % 1 / 8f) * 4f;
+            //Debug.Log(_blockedHeight);
             if (Time.time > _lastSpawnTime + DEFAULT_SPAWN_RATE)
             {
                 var newOrb = Instantiate(_orbPrefab).GetComponent<Orb>();
@@ -28,7 +32,8 @@ namespace _Project.Codebase
                 do
                 {
                     spawnHeight = Random.Range(-4.5f, 4.5f);
-                } while (Mathf.Abs(_lastSpawnHeight - spawnHeight) <= newOrb.Radius * 2f);
+                } while (Mathf.Abs(_lastSpawnHeight - spawnHeight) <= newOrb.Radius * 2f || 
+                         Mathf.Abs(_blockedHeight - spawnHeight) <= 2.5f);
                 
                 newOrb.transform.position = new Vector3(10f, spawnHeight, 0f);
                 

@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.UIElements;
+using Random = UnityEngine.Random;
 
 namespace _Project.Codebase
 {
@@ -12,8 +15,12 @@ namespace _Project.Codebase
         [field: SerializeField] public bool Attached { get; private set; }
         [SerializeField] private Rigidbody2D _rb;
         [SerializeField] private SpriteRenderer _spriteRenderer;
+        [SerializeField] private FillImage _healthBar;
+        
         [SerializeField] private GameObject _scoreIncreasePrefab;
 
+        private int _maxHealth;
+        
         public Transform Transform => transform;
         public List<Orb> DirectChildrenOrbs { get; } = new List<Orb>();
 
@@ -24,6 +31,7 @@ namespace _Project.Codebase
         [UsedImplicitly]
         private void Start()
         {
+            _maxHealth = Health;
             _spriteRenderer.color = new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
         }
 
@@ -38,6 +46,14 @@ namespace _Project.Codebase
                     RemoveOrbAsChild(DirectChildrenOrbs[i]);
                 Destroy(gameObject);
             }
+        }
+
+        [UsedImplicitly]
+        private void Update()
+        {
+            _healthBar.FillAmount = Utils.Remap01(Health, 0f, _maxHealth);
+            _healthBar.Color = Color.HSVToRGB(_healthBar.FillAmount * 100f/360f, 1f, 1f);
+            _healthBar.Alpha = Health == _maxHealth ? 0f : 1f;
         }
 
         [UsedImplicitly]
