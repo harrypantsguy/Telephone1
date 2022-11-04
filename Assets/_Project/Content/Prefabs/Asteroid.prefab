@@ -5248,7 +5248,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74dc195759724bc381131b491ba36bb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <Radius>k__BackingField: 0.5
+  <Radius>k__BackingField: 0.4
   <Health>k__BackingField: 5
   <IsInStasis>k__BackingField: 0
   _rb: {fileID: 5558479572566782409}
@@ -5294,4 +5294,4 @@ CircleCollider2D:
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.4
