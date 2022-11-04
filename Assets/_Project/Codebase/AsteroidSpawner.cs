@@ -3,11 +3,11 @@ using Random = UnityEngine.Random;
 
 namespace _Project.Codebase
 {
-    public class OrbSpawner : MonoBehaviour
+    public class AsteroidSpawner : MonoBehaviour
     {
-        [SerializeField] private GameObject _orbPrefab;
+        [SerializeField] private GameObject _asteroidPrefab;
         
-        private const float DEFAULT_SPAWN_RATE = .25f;
+        private const float DEFAULT_SPAWN_RATE = .75f;
 
         private float _blockedHeight;
         private float _lastSpawnTime;
@@ -26,7 +26,7 @@ namespace _Project.Codebase
             //Debug.Log(_blockedHeight);
             if (Time.time > _lastSpawnTime + DEFAULT_SPAWN_RATE)
             {
-                var newOrb = Instantiate(_orbPrefab).GetComponent<Orb>();
+                var newOrb = Instantiate(_asteroidPrefab).GetComponent<Asteroid>();
 
                 float spawnHeight;
                 do

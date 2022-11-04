@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
@@ -6,17 +5,19 @@ using UnityEngine;
 
 namespace _Project.Codebase
 {
-    public class Player : MonoSingleton<Player>, IOrbParent
+    public class Player : MonoSingleton<Player>, IAsteroidParent
     {
         [field: SerializeField] public float Radius { get; private set; }
         [SerializeField] private Rigidbody2D _rb;
         [SerializeField] private LineRenderer _lineRenderer;
+        [SerializeField] private Transform _spriteTransform;
+        [SerializeField] private LineRenderer _stasisChainRenderer;
 
         public bool OffScreen { get; private set; }
         public float MaxStamina { get; private set; } = _DEFAULT_MAX_STAMINA;
         public float Stamina { get; private set; }
         public Transform Transform => transform;
-        public List<Orb> DirectChildrenOrbs { get; } = new List<Orb>();
+        public List<Asteroid> DirectChildrenAsteroids { get; } = new List<Asteroid>();
 
         private const float _DEFAULT_MOVE_SPEED = 5f;
         private const float _DEFAULT_BEAM_LENGTH = 3f;
@@ -26,10 +27,11 @@ namespace _Project.Codebase
         private const float _DEFAULT_STAMINA_DECAY_RATE = 1f;
         private const float _DEFAULT_STAMINA_RECOVERY_RATE = .75f;
 
-        private int TotalNumChildOrbs => DirectChildrenOrbs.Sum(childOrb => childOrb.TotalChildOrbCount) + DirectChildrenOrbs.Count;
+        private int TotalNumChildAsteroids => DirectChildrenAsteroids.Sum(childAsteroid => childAsteroid.TotalChildAsteroidCount) + DirectChildrenAsteroids.Count;
         
         private Vector2 _inputVelocity;
         private float _lastDamageTime;
+        private readonly List<Asteroid> _allChildAsteroids = new();
 
         private void Start()
         {
@@ -44,29 +46,54 @@ namespace _Project.Codebase
 
             if (OffScreen) return;
 
+            HandleMovement();
+            
+            _allChildAsteroids.Clear();
+            GetAllChildAsteroidsNonAlloc(_allChildAsteroids);
+            
+            HandleBeam();
+            HandleSpriteRotation();
+            HandleStasisChain();
+        }
+
+        public void AddAsteroidAsChild(in Asteroid newChildAsteroid)
+        {
+            DirectChildrenAsteroids.Add(newChildAsteroid);
+            newChildAsteroid.SetParent(this);
+        }
+
+        public void RemoveAsteroidAsChild(in Asteroid childAsteroid)
+        {
+            DirectChildrenAsteroids.Remove(childAsteroid);
+        }
+
+        public void GetAllChildAsteroidsNonAlloc(in List<Asteroid> asteroids)
+        {
+            asteroids.AddRange(DirectChildrenAsteroids);
+            foreach (var childAsteroid in DirectChildrenAsteroids)
+                childAsteroid.GetAllChildAsteroidsNonAlloc(asteroids);
+        }
+
+        private void HandleMovement()
+        {
             bool pressingSprint = GameControls.Sprint.IsHeld;
             
             float moveSpeed = _DEFAULT_MOVE_SPEED + (pressingSprint && Stamina > 0f ? _SPRINT_SPEED_INCREASE : 0f);
 
             _inputVelocity = GameControls.DirectionalInput * moveSpeed;
-            _rb.velocity = _inputVelocity + new Vector2(-TotalNumChildOrbs, 0f);
+            _rb.velocity = Vector2.Lerp(_rb.velocity, _inputVelocity + new Vector2(-TotalNumChildAsteroids, 0f), 5f * Time.deltaTime);
 
-            Stamina = Mathf.Clamp(Stamina + (pressingSprint ?
-                                      -_DEFAULT_STAMINA_DECAY_RATE : _DEFAULT_STAMINA_RECOVERY_RATE) * Time.deltaTime,
-                0f, MaxStamina);
+            Stamina = Mathf.Clamp(Stamina + (pressingSprint ? -_DEFAULT_STAMINA_DECAY_RATE : _DEFAULT_STAMINA_RECOVERY_RATE) * Time.deltaTime, 0f, MaxStamina);
         }
 
-        [UsedImplicitly]
-        private void LateUpdate()
+        private void HandleBeam()
         {
-            if (OffScreen) return;
-            
             var beamStart = _rb.position;
             Vector2 beamEnd;
             var beamDir = (Utils.WorldMousePos - _rb.position).normalized;
 
             var hit = Physics2D.Raycast(_rb.position, beamDir, _DEFAULT_BEAM_LENGTH, 
-                Layers.OrbMask);
+                Layers.AsteroidMask);
 
             bool firingBeam = GameControls.FireBeam.IsHeld;
             
@@ -95,15 +122,15 @@ namespace _Project.Codebase
             });
         }
 
-        public void AddOrbAsChild(in Orb newChildOrb)
+        private void HandleSpriteRotation()
         {
-            DirectChildrenOrbs.Add(newChildOrb);
-            newChildOrb.SetParent(this);
+            var spriteDir = (Utils.WorldMousePos - _rb.position).normalized;
+            _spriteTransform.right = spriteDir;
         }
 
-        public void RemoveOrbAsChild(in Orb childOrb)
+        private void HandleStasisChain()
         {
-            DirectChildrenOrbs.Remove(childOrb);
+            
         }
     }
 }

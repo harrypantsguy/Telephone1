@@ -4,6 +4,6 @@ namespace _Project.Codebase
 {
     public static class Layers
     {
-        public static readonly LayerMask OrbMask = 1 << 7;
+        public static readonly LayerMask AsteroidMask = 1 << 7;
     }
 }
