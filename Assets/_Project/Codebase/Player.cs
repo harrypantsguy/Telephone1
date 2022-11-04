@@ -31,7 +31,7 @@ namespace _Project.Codebase
         
         private Vector2 _inputVelocity;
         private float _lastDamageTime;
-        private readonly List<Asteroid> _allChildAsteroids = new();
+        private readonly List<Asteroid> _allChildAsteroids = new List<Asteroid>();
 
         private void Start()
         {
