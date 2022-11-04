@@ -35,7 +35,7 @@ namespace _Project.Codebase
                 } while (Mathf.Abs(_lastSpawnHeight - spawnHeight) <= newOrb.Radius * 2f || 
                          Mathf.Abs(_blockedHeight - spawnHeight) <= 2.5f);
                 
-                newOrb.transform.position = new Vector3(10f, spawnHeight, 0f);
+                newOrb.transform.position = new Vector3(12f, spawnHeight, 0f);
                 
                 _lastSpawnTime = Time.time;
                 _lastSpawnHeight = spawnHeight;

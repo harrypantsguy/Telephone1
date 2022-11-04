@@ -2,6 +2,7 @@
 using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using Random = UnityEngine.Random;
 
 namespace _Project.Codebase
@@ -10,11 +11,14 @@ namespace _Project.Codebase
     {
         [field: SerializeField] public float Radius { get; private set; }
         [field: SerializeField] public int Health { get; private set; }
-        [field: SerializeField] public bool Attached { get; private set; }
+        [field: SerializeField] public bool IsInStasis { get; private set; }
         [SerializeField] private Rigidbody2D _rb;
         [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private FillImage _healthBar;
         [SerializeField] private GameObject _scoreIncreasePrefab;
+        [SerializeField] private ParticleSystem _stasisParticles;
+        [SerializeField] private Light2D _stasisLight;
+        [SerializeField] private GameObject _debrisParticlesPrefab;
 
         private int _maxHealth;
         
@@ -43,14 +47,18 @@ namespace _Project.Codebase
             _healthBar.Color = Color.HSVToRGB(_healthBar.FillAmount * 100f/360f, 1f, 1f);
             _healthBar.Alpha = Health == _maxHealth ? 0f : 1f;
             
-            if (!Attached)
+            if (!IsInStasis)
                 _spriteRenderer.transform.Rotate(0f, 0f, _rotationSpeed * Time.deltaTime);
         }
 
         [UsedImplicitly]
         private void FixedUpdate()
         {
-            _rb.velocity = Vector2.left * _moveSpeed;
+            if (!IsInStasis)
+            {
+                _rb.isKinematic = false;
+                _rb.velocity = Vector2.left * _moveSpeed;
+            }
 
             if (_rb.position.x < -10f)
             {
@@ -61,15 +69,25 @@ namespace _Project.Codebase
         }
 
         [UsedImplicitly]
+        private void LateUpdate()
+        {
+            var emissionModule = _stasisParticles.emission;
+            emissionModule.rateOverTime = IsInStasis ? 25 : 0;
+            _stasisLight.enabled = IsInStasis;
+        }
+
+        [UsedImplicitly]
         private void OnCollisionEnter2D(Collision2D col)
         {
-            if (Attached) return;
+            if (IsInStasis) return;
+            CheckForStasisCollision(col.collider);
+        }
 
-            if (col.gameObject.TryGetComponent(out IAsteroidParent orbParent))
-            {
-                orbParent.AddAsteroidAsChild(this);
-                Attached = true;
-            }
+        [UsedImplicitly]
+        private void OnCollisionStay2D(Collision2D collision)
+        {
+            if (IsInStasis) return;
+            CheckForStasisCollision(collision.collider);
         }
 
         public void AddAsteroidAsChild(in Asteroid newChildAsteroid)
@@ -99,7 +117,7 @@ namespace _Project.Codebase
             
             var offset = (transform.position - parent.Transform.position).normalized * (parent.Radius + Radius);
             transform.SetParent(parent.Transform);
-            transform.localPosition = offset;
+            transform.position = parent.Transform.position + offset;
         }
 
         public void TakeDamage(in int damage)
@@ -122,8 +140,26 @@ namespace _Project.Codebase
 
             var scoreIncrease = Instantiate(_scoreIncreasePrefab, _rb.position, Quaternion.identity).GetComponent<ScoreIncreaseUI>();
             scoreIncrease.SetIncrease(1);
-            
+
+            var debris = Instantiate(_debrisParticlesPrefab, transform.position, Quaternion.identity);
+            Destroy(debris, _debrisParticlesPrefab.GetComponent<ParticleSystem>().main.duration);
             Destroy(gameObject);
+        }
+
+        private void CheckForStasisCollision(in Collider2D col)
+        {
+            if (col.gameObject.TryGetComponent(out StasisBarrier barrier))
+            {
+                barrier.AddAsteroidAsChild(this);
+                IsInStasis = true;
+                _rb.isKinematic = true;
+            }
+            else if (col.gameObject.TryGetComponent(out Asteroid asteroid) && asteroid.IsInStasis)
+            {
+                asteroid.AddAsteroidAsChild(this);
+                IsInStasis = true;
+                _rb.isKinematic = true;
+            }
         }
     }
 }

@@ -1,23 +1,23 @@
-using System.Collections.Generic;
-using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.VFX;
 
 namespace _Project.Codebase
 {
-    public class Player : MonoSingleton<Player>, IAsteroidParent
+    public class Player : MonoSingleton<Player>
     {
-        [field: SerializeField] public float Radius { get; private set; }
         [SerializeField] private Rigidbody2D _rb;
         [SerializeField] private LineRenderer _lineRenderer;
         [SerializeField] private Transform _spriteTransform;
-        [SerializeField] private LineRenderer _stasisChainRenderer;
-
+        [SerializeField] private StasisBarrier _stasisBarrier;
+        [SerializeField] private VisualEffect _beamHitVfx;
+        [SerializeField] private Light2D _beamHitLight;
+        
         public bool OffScreen { get; private set; }
         public float MaxStamina { get; private set; } = _DEFAULT_MAX_STAMINA;
         public float Stamina { get; private set; }
-        public Transform Transform => transform;
-        public List<Asteroid> DirectChildrenAsteroids { get; } = new List<Asteroid>();
+        
 
         private const float _DEFAULT_MOVE_SPEED = 5f;
         private const float _DEFAULT_BEAM_LENGTH = 3f;
@@ -27,12 +27,11 @@ namespace _Project.Codebase
         private const float _DEFAULT_STAMINA_DECAY_RATE = 1f;
         private const float _DEFAULT_STAMINA_RECOVERY_RATE = .75f;
 
-        private int TotalNumChildAsteroids => DirectChildrenAsteroids.Sum(childAsteroid => childAsteroid.TotalChildAsteroidCount) + DirectChildrenAsteroids.Count;
+        private const string _BEAM_HIT_VFX_SPAWN_RATE_HASH = "SpawnRate";
         
         private Vector2 _inputVelocity;
         private float _lastDamageTime;
-        private readonly List<Asteroid> _allChildAsteroids = new List<Asteroid>();
-
+        
         private void Start()
         {
             Stamina = MaxStamina;
@@ -47,31 +46,8 @@ namespace _Project.Codebase
             if (OffScreen) return;
 
             HandleMovement();
-            
-            _allChildAsteroids.Clear();
-            GetAllChildAsteroidsNonAlloc(_allChildAsteroids);
-            
             HandleBeam();
             HandleSpriteRotation();
-            HandleStasisChain();
-        }
-
-        public void AddAsteroidAsChild(in Asteroid newChildAsteroid)
-        {
-            DirectChildrenAsteroids.Add(newChildAsteroid);
-            newChildAsteroid.SetParent(this);
-        }
-
-        public void RemoveAsteroidAsChild(in Asteroid childAsteroid)
-        {
-            DirectChildrenAsteroids.Remove(childAsteroid);
-        }
-
-        public void GetAllChildAsteroidsNonAlloc(in List<Asteroid> asteroids)
-        {
-            asteroids.AddRange(DirectChildrenAsteroids);
-            foreach (var childAsteroid in DirectChildrenAsteroids)
-                childAsteroid.GetAllChildAsteroidsNonAlloc(asteroids);
         }
 
         private void HandleMovement()
@@ -81,7 +57,7 @@ namespace _Project.Codebase
             float moveSpeed = _DEFAULT_MOVE_SPEED + (pressingSprint && Stamina > 0f ? _SPRINT_SPEED_INCREASE : 0f);
 
             _inputVelocity = GameControls.DirectionalInput * moveSpeed;
-            _rb.velocity = Vector2.Lerp(_rb.velocity, _inputVelocity + new Vector2(-TotalNumChildAsteroids, 0f), 5f * Time.deltaTime);
+            _rb.velocity = Vector2.Lerp(_rb.velocity, _inputVelocity + new Vector2(-_stasisBarrier.TotalNumChildAsteroids, 0f), 5f * Time.deltaTime);
 
             Stamina = Mathf.Clamp(Stamina + (pressingSprint ? -_DEFAULT_STAMINA_DECAY_RATE : _DEFAULT_STAMINA_RECOVERY_RATE) * Time.deltaTime, 0f, MaxStamina);
         }
@@ -96,41 +72,54 @@ namespace _Project.Codebase
                 Layers.AsteroidMask);
 
             bool firingBeam = GameControls.FireBeam.IsHeld;
-            
-            if (hit.collider != null && hit.collider.TryGetComponent(out IDamageable damageable))
+
+            if (firingBeam)
             {
-                beamEnd = hit.point;
-                if (Time.time > _lastDamageTime + _DEFAULT_BEAM_DAMAGE_RATE)
+                _lineRenderer.enabled = true;
+                
+                if (hit.collider != null && hit.collider.TryGetComponent(out IDamageable damageable))
                 {
-                    if (firingBeam)
-                        damageable.TakeDamage(1);
-                    _lastDamageTime = Time.time;
+                    beamEnd = hit.point;
+                    _beamHitLight.transform.position = beamEnd;
+                    _beamHitVfx.transform.position = beamEnd;
+                    _beamHitVfx.transform.right = _spriteTransform.right;
+
+                    if (Time.time > _lastDamageTime + _DEFAULT_BEAM_DAMAGE_RATE)
+                    {
+                        if (firingBeam)
+                            damageable.TakeDamage(1);
+                        _lastDamageTime = Time.time;
+                    }
+
+                    _beamHitLight.enabled = true;
+                    _beamHitVfx.SetInt(_BEAM_HIT_VFX_SPAWN_RATE_HASH, 32);
                 }
+                else
+                {
+                    beamEnd = (Vector2)transform.position + beamDir * _DEFAULT_BEAM_LENGTH;
+                    _beamHitLight.enabled = false;
+                    _beamHitVfx.SetInt(_BEAM_HIT_VFX_SPAWN_RATE_HASH, 0);
+                }
+
+                _lineRenderer.positionCount = 2;
+                _lineRenderer.SetPositions(new Vector3[]
+                {
+                    beamStart,
+                    beamEnd
+                });
             }
             else
-                beamEnd = (Vector2)transform.position + beamDir * _DEFAULT_BEAM_LENGTH;
-
-            float beamAlpha = firingBeam ? 1f : .25f;
-            
-            _lineRenderer.startColor = _lineRenderer.startColor.SetAlpha(beamAlpha);
-            _lineRenderer.endColor = _lineRenderer.endColor.SetAlpha(beamAlpha);
-            _lineRenderer.positionCount = 2;
-            _lineRenderer.SetPositions(new Vector3[]
             {
-                beamStart,
-                beamEnd
-            });
+                _lineRenderer.enabled = false;
+                _beamHitLight.enabled = false;
+                _beamHitVfx.SetInt(_BEAM_HIT_VFX_SPAWN_RATE_HASH, 0);
+            }
         }
 
         private void HandleSpriteRotation()
         {
             var spriteDir = (Utils.WorldMousePos - _rb.position).normalized;
             _spriteTransform.right = spriteDir;
-        }
-
-        private void HandleStasisChain()
-        {
-            
         }
     }
 }
