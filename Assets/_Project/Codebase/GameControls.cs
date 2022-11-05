@@ -9,8 +9,10 @@ namespace _Project.Codebase
         public static readonly KeyBind Down = new KeyBind(KeyCode.S);
         public static readonly KeyBind Left = new KeyBind(KeyCode.A);
         public static readonly KeyBind Right = new KeyBind(KeyCode.D);
-        public static readonly KeyBind FireBeam = new KeyBind(KeyCode.Mouse0);
+        public static readonly KeyBind FireMiningBeam = new KeyBind(KeyCode.Mouse0);
+        public static readonly KeyBind FireTractorBeam = new KeyBind(KeyCode.Mouse1);
         public static readonly KeyBind Sprint = new KeyBind(KeyCode.LeftShift);
+        public static readonly KeyBind ToggleStasis = new KeyBind(KeyCode.F);
 
         public static float MouseYInput => Input.GetAxisRaw("Mouse Y");
         public static float MouseXInput => Input.GetAxisRaw("Mouse X");

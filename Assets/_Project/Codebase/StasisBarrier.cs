@@ -15,6 +15,17 @@ namespace _Project.Codebase
         
         private readonly List<Asteroid> _allChildAsteroids = new List<Asteroid>();
 
+        public bool IsActive { get; private set; }
+        public void SetActive(bool state)
+        {
+            gameObject.SetActive(state);
+            
+            if (!state)
+                RemoveAllChildAsteroids();
+
+            IsActive = state;
+        }
+
         [UsedImplicitly]
         private void Update()
         {
@@ -38,6 +49,17 @@ namespace _Project.Codebase
             asteroids.AddRange(DirectChildrenAsteroids);
             foreach (var childAsteroid in DirectChildrenAsteroids)
                 childAsteroid.GetAllChildAsteroidsNonAlloc(asteroids);
+        }
+
+        public void RemoveAllChildAsteroids()
+        {
+            for (var i = DirectChildrenAsteroids.Count - 1; i >= 0; i--)
+            {
+                Asteroid child = DirectChildrenAsteroids[i];
+                child.SetParent(null);
+                RemoveAsteroidAsChild(child);    
+                child.RemoveAllChildAsteroids();
+            }
         }
     }
 }

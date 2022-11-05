@@ -21,15 +21,23 @@ namespace _Project.Codebase
         [SerializeField] private GameObject _debrisParticlesPrefab;
 
         private int _maxHealth;
-        
+
+        public Vector2 Velocity
+        {
+            get => _rb.velocity;
+            set => _rb.velocity = value;
+        }
         public Transform Transform => transform;
         public List<Asteroid> DirectChildrenAsteroids { get; } = new List<Asteroid>();
 
         public int TotalChildAsteroidCount => DirectChildrenAsteroids.Sum(childOrb => childOrb.TotalChildAsteroidCount) + DirectChildrenAsteroids.Count;
-
+        public Vector2 tractorBeamVelocity;
+        public bool hasReceivedTractorBeamUpdateThisFrame;
+        
         private IAsteroidParent _parent;
         private float _rotationSpeed;
         private float _moveSpeed;
+        private float _startingDistance;
 
         [UsedImplicitly]
         private void Start()
@@ -38,13 +46,16 @@ namespace _Project.Codebase
             _spriteRenderer.transform.eulerAngles = new Vector3(0f, 0f, Random.Range(0f, 360f));
             _rotationSpeed = Random.Range(3f, 9f);
             _moveSpeed = Random.Range(1.5f, 3f);
+            //Velocity += Vector2.right * 50f;
+
+            _startingDistance = transform.position.magnitude;
         }
 
         [UsedImplicitly]
         private void Update()
         {
             _healthBar.FillAmount = Utils.Remap01(Health, 0f, _maxHealth);
-            _healthBar.Color = Color.HSVToRGB(_healthBar.FillAmount * 100f/360f, 1f, 1f);
+            _healthBar.Color = Color.HSVToRGB(_healthBar.FillAmount * .4f, 1f, 1f);
             _healthBar.Alpha = Health == _maxHealth ? 0f : 1f;
             
             if (!IsInStasis)
@@ -56,16 +67,17 @@ namespace _Project.Codebase
         {
             if (!IsInStasis)
             {
+               // Velocity -= _rb.position * Time.fixedDeltaTime;
                 _rb.isKinematic = false;
-                _rb.velocity = Vector2.left * _moveSpeed;
+                //_rb.velocity = tractorBeamVelocity +  //Vector2.left * _moveSpeed + tractorBeamVelocity;
             }
+            else
+                Velocity = Vector2.zero;
 
-            if (_rb.position.x < -12f)
-            {
-                for (var i = DirectChildrenAsteroids.Count - 1; i >= 0; i--)
-                    RemoveAsteroidAsChild(DirectChildrenAsteroids[i]);
-                Destroy(gameObject);
-            }
+            //if (!hasReceivedTractorBeamUpdateThisFrame)
+            //    tractorBeamVelocity = Vector2.MoveTowards(tractorBeamVelocity, Vector2.zero, Time.deltaTime * 10f);
+
+            hasReceivedTractorBeamUpdateThisFrame = false;
         }
 
         [UsedImplicitly]
@@ -109,11 +121,29 @@ namespace _Project.Codebase
                 childAsteroid.GetAllChildAsteroidsNonAlloc(asteroids);
         }
 
+        public void RemoveAllChildAsteroids()
+        {
+            for (var i = DirectChildrenAsteroids.Count - 1; i >= 0; i--)
+            {
+                Asteroid child = DirectChildrenAsteroids[i];
+                child.SetParent(null);
+                RemoveAsteroidAsChild(child);
+                child.RemoveAllChildAsteroids();
+            }
+        }
+
         public void SetParent(in IAsteroidParent parent)
         {
             _parent = parent;
+            tractorBeamVelocity = Vector2.zero;
 
-            if (_parent == null) return;
+            if (_parent == null)
+            {
+                if (transform != null)
+                    transform.SetParent(null);
+                IsInStasis = false;
+                return;
+            }
             
             var offset = (transform.position - parent.Transform.position).normalized * (parent.Radius + Radius);
             transform.SetParent(parent.Transform);

@@ -12,5 +12,6 @@ namespace _Project.Codebase
         public void AddAsteroidAsChild(in Asteroid newChildAsteroid);
         public void RemoveAsteroidAsChild(in Asteroid childAsteroid);
         public void GetAllChildAsteroidsNonAlloc(in List<Asteroid> asteroids);
+        public void RemoveAllChildAsteroids();
     }
 }
