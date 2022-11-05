@@ -5102,7 +5102,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &5379957734182825793
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5258,6 +5258,8 @@ MonoBehaviour:
   _stasisParticles: {fileID: 2471579234545801772}
   _stasisLight: {fileID: 228976006538893120}
   _debrisParticlesPrefab: {fileID: 4246514097457110546, guid: fed93afb5a3a67148af2fd2e27596d6c, type: 3}
+  tractorBeamVelocity: {x: 0, y: 0}
+  hasReceivedTractorBeamUpdateThisFrame: 0
 --- !u!50 &5558479572566782409
 Rigidbody2D:
   serializedVersion: 4
@@ -5270,7 +5272,7 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 1
   m_UseAutoMass: 0
-  m_Mass: 1
+  m_Mass: 10
   m_LinearDrag: 0
   m_AngularDrag: 0
   m_GravityScale: 0

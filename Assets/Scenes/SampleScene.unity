@@ -250,7 +250,7 @@ Transform:
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 635284279}
-  m_RootOrder: 5
+  m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &316352418
 GameObject:
@@ -562,7 +562,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &701598570
 Transform:
   m_ObjectHideFlags: 0
@@ -5612,6 +5612,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1399178315 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 250670086044734651, guid: c18807091fd61ac4b9c2a10e637b3162, type: 3}
+  m_PrefabInstance: {fileID: 350875437360189386}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85509b2e1c843aea8cf9d1f145e01d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1624162012
 GameObject:
   m_ObjectHideFlags: 0
@@ -5826,6 +5837,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 350875436131934040, guid: c18807091fd61ac4b9c2a10e637b3162, type: 3}
+      propertyPath: _miningBeam
+      value: 
+      objectReference: {fileID: 1399178315}
     - target: {fileID: 350875436131934041, guid: c18807091fd61ac4b9c2a10e637b3162, type: 3}
       propertyPath: m_RootOrder
       value: 1
@@ -6158,5 +6173,6 @@ PrefabInstance:
       propertyPath: m_Vertices.Array.data[8].position.y
       value: -0.56
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7231975972998334397, guid: c18807091fd61ac4b9c2a10e637b3162, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: c18807091fd61ac4b9c2a10e637b3162, type: 3}

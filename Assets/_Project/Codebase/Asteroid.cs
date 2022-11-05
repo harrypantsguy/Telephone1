@@ -54,9 +54,11 @@ namespace _Project.Codebase
         [UsedImplicitly]
         private void Update()
         {
+            bool display = Health < _maxHealth;
+            _healthBar.gameObject.SetActive(display);
             _healthBar.FillAmount = Utils.Remap01(Health, 0f, _maxHealth);
             _healthBar.Color = Color.HSVToRGB(_healthBar.FillAmount * .4f, 1f, 1f);
-            _healthBar.Alpha = Health == _maxHealth ? 0f : 1f;
+            //_healthBar.Alpha = display ? 0f : 1f;
             
             if (!IsInStasis)
                 _spriteRenderer.transform.Rotate(0f, 0f, _rotationSpeed * Time.deltaTime);
@@ -85,7 +87,8 @@ namespace _Project.Codebase
         {
             var emissionModule = _stasisParticles.emission;
             emissionModule.rateOverTime = IsInStasis ? 25 : 0;
-            _stasisLight.enabled = IsInStasis;
+            _stasisLight.gameObject.SetActive(IsInStasis);
+            //_stasisLight.enabled = IsInStasis;
         }
 
         [UsedImplicitly]
