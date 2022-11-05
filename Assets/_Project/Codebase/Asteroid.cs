@@ -60,7 +60,7 @@ namespace _Project.Codebase
                 _rb.velocity = Vector2.left * _moveSpeed;
             }
 
-            if (_rb.position.x < -10f)
+            if (_rb.position.x < -12f)
             {
                 for (var i = DirectChildrenAsteroids.Count - 1; i >= 0; i--)
                     RemoveAsteroidAsChild(DirectChildrenAsteroids[i]);
