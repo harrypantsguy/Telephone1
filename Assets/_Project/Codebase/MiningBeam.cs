@@ -23,7 +23,7 @@ namespace _Project.Codebase
         {
             var beamStart = transform.position;
             Vector2 beamEnd;
-            var beamDir = (Utils.WorldMousePos - (Vector2)transform.position).normalized;
+            var beamDir = (Vector2)transform.right;
 
             var hit = Physics2D.Raycast(transform.position, beamDir, length, 
                 Layers.AsteroidMask);
