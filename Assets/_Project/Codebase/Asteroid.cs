@@ -12,6 +12,7 @@ namespace _Project.Codebase
         [field: SerializeField] public float Radius { get; private set; }
         [field: SerializeField] public int Health { get; private set; }
         [field: SerializeField] public bool IsInStasis { get; private set; }
+        [SerializeField] private GameObject _graphicsObj;
         [SerializeField] private Rigidbody2D _rb;
         [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private FillImage _healthBar;
@@ -33,7 +34,8 @@ namespace _Project.Codebase
         public int TotalChildAsteroidCount => DirectChildrenAsteroids.Sum(childOrb => childOrb.TotalChildAsteroidCount) + DirectChildrenAsteroids.Count;
         public Vector2 tractorBeamVelocity;
         public bool hasReceivedTractorBeamUpdateThisFrame;
-        
+
+        private bool _culled;
         private IAsteroidParent _parent;
         private float _rotationSpeed;
         private float _moveSpeed;
@@ -54,6 +56,10 @@ namespace _Project.Codebase
         [UsedImplicitly]
         private void Update()
         {
+            _culled = Vector2.Distance(transform.position, Player.Singleton.transform.position) > 20f;
+            _graphicsObj.SetActive(!_culled);
+            if (_culled) return;
+            
             bool display = Health < _maxHealth;
             _healthBar.gameObject.SetActive(display);
             _healthBar.FillAmount = Utils.Remap01(Health, 0f, _maxHealth);
@@ -67,6 +73,7 @@ namespace _Project.Codebase
         [UsedImplicitly]
         private void FixedUpdate()
         {
+            if (_culled) return;
             if (!IsInStasis)
             {
                // Velocity -= _rb.position * Time.fixedDeltaTime;
@@ -85,6 +92,7 @@ namespace _Project.Codebase
         [UsedImplicitly]
         private void LateUpdate()
         {
+            if (_culled) return;
             var emissionModule = _stasisParticles.emission;
             emissionModule.rateOverTime = IsInStasis ? 25 : 0;
             _stasisLight.gameObject.SetActive(IsInStasis);

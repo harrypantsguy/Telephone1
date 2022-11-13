@@ -539,9 +539,11 @@ namespace _Project.Codebase
             return new Vector2(Mathf.Clamp(vector.x, min.x, max.x), Mathf.Clamp(vector.y, min.y, max.y));
         }
 
-        public static Vector2 RotateDirectionByAngle(Vector2 dir, float angle) => 
-            AngleToDirection(DirectionToAngle(dir) + angle);
-
+        public static Vector2 RotateDirBy(Vector2 dir, float angleRotation)
+        {
+            return AngleToDirection(DirectionToAngle(dir) + angleRotation);
+        }
+        
         public static Vector2 AngleToDirection(float angle)
         {
             return new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
@@ -637,10 +639,7 @@ namespace _Project.Codebase
             return start + text + end;
         }
 
-        public static Vector2 RotateDirBy(Vector2 dir, float angleRotation)
-        {
-            return AngleToDirection(DirectionToAngle(dir) + angleRotation);
-        }
+
 
         public static bool PointInsideRect(Vector2 dims, Vector2 center, Vector2 point)
         {

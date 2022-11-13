@@ -18,10 +18,9 @@ namespace _Project.Codebase
             
             _localCameraOffset = new Vector2(mousePositionRelToCenter.x * _MOUSE_OFFSET_SCALE / Screen.width,
                mousePositionRelToCenter.y * _MOUSE_OFFSET_SCALE / Screen.height);
-            
-            Vector2 targetPos = Vector2.Lerp(transform.position, 
-                
-                (Vector2)targetTransform.position + _localCameraOffset, 5f * Time.deltaTime);
+
+            Vector2 newTargetPos = (targetTransform != null ? (Vector2) targetTransform.position : Vector2.zero) + _localCameraOffset;
+            Vector2 targetPos = Vector2.Lerp(transform.position,newTargetPos, 5f * Time.deltaTime);
             transform.position = ((Vector3) targetPos).SetZ(-10f);
         }
     }

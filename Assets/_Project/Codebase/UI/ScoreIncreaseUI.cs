@@ -21,7 +21,7 @@ namespace _Project.Codebase
 
             while (t < duration)
             {
-                t += Time.deltaTime;
+                t += Time.unscaledDeltaTime;
 
                 var col = _text.color;
                 col.a = 1f - t / duration;

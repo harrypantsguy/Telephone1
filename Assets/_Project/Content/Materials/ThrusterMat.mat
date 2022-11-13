@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: BeamMat
-  m_Shader: {fileID: -6465566751694194690, guid: f2f3c7d2fc04c10469e41d4c105f7bf3, type: 3}
+  m_Name: ThrusterMat
+  m_Shader: {fileID: -6465566751694194690, guid: aa2c6ef805efe4a42acedaf8b38feb37, type: 3}
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -50,24 +50,21 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - PixelSnap: 0
-    - _BeamNoiseAmplitude: -0.5
-    - _BeamNoiseScale: 20
-    - _BeamNoiseSpeed: -6
-    - _BeamSizeMultiplier: 0.5
-    - _BeamWidth: 0
     - _EnableExternalAlpha: 0
-    - _InnerToEdgeColorWidthFraction: 1.8
-    - _Length: 1
-    - _NoiseAmplitude: 0
-    - _NoiseScale: 100
-    - _NoiseSpeed: 0.35
-    - _Width: 0.34
+    - _InnerToEdgeColorWIdth: 0.09
+    - _InnerToEdgeColorWIdthFraction: 0.25
+    - _InnerToEdgeColorWidthFraction: 0.4
+    - _Length: 0.31
+    - _NoiseAmplitude: 0.12
+    - _NoiseScale: 92
+    - _NoiseSpeed: 8
+    - _TaperLength: 0
+    - _Width: 0.03
     m_Colors:
-    - _BeamColor: {r: 0, g: 0.9166665, b: 1, a: 1}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EdgeColor: {r: 1, g: 1, b: 1, a: 0}
+    - _EdgeColor: {r: 0.14117648, g: 0.99607843, b: 0.99607843, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
-    - _InnerColor: {r: 0, g: 0.3028696, b: 1, a: 1}
+    - _InnerColor: {r: 0.6367924, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
