@@ -11,11 +11,11 @@ namespace _Project.Codebase
         public static readonly KeyBind Right = new KeyBind(KeyCode.D);
         public static readonly KeyBind FollowTarget = new KeyBind(KeyCode.Mouse0);
         public static readonly KeyBind DisableThrusters = new KeyBind(KeyCode.Mouse1);
-        public static readonly KeyBind Break = new KeyBind(KeyCode.Mouse1);
+        public static readonly KeyBind FireProjectiles = new KeyBind(KeyCode.F, KeyCode.Mouse4);
         public static readonly KeyBind FireMiningBeam = new KeyBind(KeyCode.C);
         public static readonly KeyBind FireTractorBeam = new KeyBind(KeyCode.Mouse1);
         public static readonly KeyBind Sprint = new KeyBind(KeyCode.LeftShift);
-        public static readonly KeyBind ToggleStasis = new KeyBind(KeyCode.F);
+        public static readonly KeyBind ToggleStasis = new KeyBind(KeyCode.V);
         
         
         public static readonly KeyBind IncreaseGameSpeed = new KeyBind(KeyCode.RightBracket);

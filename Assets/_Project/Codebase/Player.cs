@@ -1,20 +1,18 @@
-using System;
-using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.VFX;
-using Screen = UnityEngine.Device.Screen;
 
 namespace _Project.Codebase
 {
-    public class Player : MonoSingleton<Player>
+    public class Player : MonoSingleton<Player>, ICollector
     {
         [SerializeField] private Rigidbody2D _rb;
         [SerializeField] private TractorBeam _tractorBeam;
         [SerializeField] private Transform _spriteTransform;
         [SerializeField] private StasisBarrier _stasisBarrier;
         [SerializeField] private MiningBeam _miningBeam;
+        [SerializeField] private ProjectileLauncher _projectileLauncher;
         [SerializeField] private VisualEffect _leftThrusterVfx;
         [SerializeField] private VisualEffect _rightThrusterVfx;
 
@@ -23,6 +21,8 @@ namespace _Project.Codebase
             get => _rb.velocity;
             set => _rb.velocity = value;
         }
+
+        public bool InTraversalMode { get; private set; }
         public bool StasisActivated { get; private set; }
         public float MaxStamina { get; private set; } = _DEFAULT_MAX_STAMINA;
         public float Stamina { get; private set; }
@@ -62,7 +62,7 @@ namespace _Project.Codebase
         private const float _DEFAULT_MAX_STAMINA = 5f;
         private const float _DEFAULT_STAMINA_DECAY_RATE = 1f;
         private const float _DEFAULT_STAMINA_RECOVERY_RATE = .75f;
-        private const float _DEFAULT_MAX_ROTATE_SPEED = 360f;
+        private const float _DEFAULT_MAX_ROTATE_SPEED = 540f;
         private const float _DEFAULT_ROTATE_ACCELERATION = 45f;
 
         private const string _THRUSTER_VFX_SPAWN_RATE_HASH = "SpawnRate";
@@ -77,15 +77,29 @@ namespace _Project.Codebase
         [UsedImplicitly]
         private void Update()
         {
+            if (GameControls.FireProjectiles.IsHeld)
+            {
+                _projectileLauncher.Fire();
+            }
             HandleStasis();
             HandleMiningBeam();
             HandleThrusterFX();
+            HandleSprint();
             //HandleTractorBeam();
         }
 
         private void FixedUpdate()
         {
             HandleMovement();
+            AttractAndTryCollectCollectables();
+        }
+
+        private void HandleSprint()
+        {
+            bool pressingSprint = GameControls.Sprint.IsHeld;
+            Stamina = Mathf.Clamp(
+                Stamina + (pressingSprint ? -_DEFAULT_STAMINA_DECAY_RATE : _DEFAULT_STAMINA_RECOVERY_RATE) * Time.deltaTime, 0f,
+                MaxStamina);
         }
 
         private void HandleStasis()
@@ -96,39 +110,107 @@ namespace _Project.Codebase
                 _stasisBarrier.SetActive(StasisActivated);
             }
         }
-        private float _oldAngle;
+        
         private void HandleMovement()
         {
-            bool pressingSprint = GameControls.Sprint.IsHeld;
-
-            float moveSpeed = _DEFAULT_MAX_SPEED + (pressingSprint && Stamina > 0f ? _SPRINT_SPEED_INCREASE : 0f);
-            moveSpeed = Mathf.Max(moveSpeed - _stasisBarrier.TotalNumChildAsteroids * .25f, 0f);
+            //float moveSpeed = _DEFAULT_MAX_SPEED + (pressingSprint && Stamina > 0f ? _SPRINT_SPEED_INCREASE : 0f);
+            //moveSpeed = Mathf.Max(moveSpeed - _stasisBarrier.TotalNumChildAsteroids * .25f, 0f);
 
             Vector2 keyboardInput = GameControls.DirectionalInput;
             Vector2 keyboardInputSigns = new Vector2(Mathf.Abs(keyboardInput.x) > 0f ? Mathf.Sign(keyboardInput.x) : 0f, 
                 Mathf.Abs(keyboardInput.y) > 0f ? Mathf.Sign(keyboardInput.y) : 0f);
-            //Vector2 keyboardTargetPos = transform.position;
             
-            //if (!GameControls.Break.IsHeld)
-             //   keyboardTargetPos += keyboardInput * TARGET_POS_CLAMP_RADIUS;
+            SetTargets();
 
-            //_targetAimPos = keyboardTargetPos;
-            //_targetMovePos = keyboardTargetPos;
+            ManageRotation();
             
+            HandleTranslation();
+        }
+
+        private void HandleTranslation()
+        {
+            float desiredSpeed = FinalMaxSpeed * (_clampedTargetMovePos - (Vector2) transform.position).magnitude / TARGET_POS_CLAMP_RADIUS;
+
+            Vector2 thrusterDirection = _spriteTransform.right;
+            DesiredThrusterVelocity = thrusterDirection * desiredSpeed;
+            Vector2 desiredToVelDiff = DesiredThrusterVelocity - Velocity;
+
+            float diffDot = Vector2.Dot(desiredToVelDiff.normalized, thrusterDirection);
+            float dot = Vector2.Dot(DesiredThrusterVelocity, thrusterDirection);
+            float acceleration =
+                GameControls.FollowTarget.IsHeld
+                    ? FinalAcceleration
+                    : _DEFAULT_BACKWARD_ACCELERATION; //Mathf.Clamp01(diffDot) * FinalAcceleration + Mathf.Clamp(diffDot, -1f, 0f) * _DEFAULT_BACKWARD_ACCELERATION;
+            //float driftAcceleration = 
+            //    Mathf.Clamp01(diffDot) * FinalAcceleration + Mathf.Clamp(diffDot, -1f, 0f) * _DEFAULT_BACKWARD_ACCELERATION;
+
+            Vector2 forwardDir = _spriteTransform.right;
+            Vector2 perpDir = Vector2.Perpendicular(forwardDir);
+
+            float perpVel = Vector2.Dot(Velocity, perpDir);
+            float forwardVel = Vector2.Dot(Velocity, forwardDir);
+
+            float perpVelDiff = Vector2.Dot(desiredToVelDiff, perpDir);
+            float forwardVelDiff = Vector2.Dot(desiredToVelDiff, forwardDir);
+
+            bool driftMode = !GameControls.FollowTarget.IsHeld && Mathf.Abs(diffDot) < .4f;
+            //Debug.Log($"dot: {dot}, diffDot: {diffDot}, forwardVelDiff: {forwardVelDiff}, drift: {driftMode}, artificial a: {ArtificialThrusterForce}, a: {acceleration}");
+
+            if (GameControls.DisableThrusters.IsHeld)
+                ThrusterForce = Vector2.zero;
+            else
+            {
+                float perpForce = perpVelDiff * acceleration; //(driftMode ? 0f : acceleration);
+                float forwardForce = forwardVelDiff * acceleration; //(driftMode ? acceleration : acceleration);
+
+                ThrusterForce = perpDir * perpForce + forwardDir * forwardForce;
+
+                //Debug.DrawRay(transform.position, perpDir * perpVel, Color.white);
+                //Debug.DrawRay(transform.position, forwardDir * forwardVel, Color.white);
+
+                Debug.DrawRay(transform.position, perpDir * perpForce, Color.red);
+                Debug.DrawRay(transform.position, forwardDir * forwardForce, Color.red);
+
+                //ThrusterForce = (DesiredThrusterVelocity - Velocity) * acceleration;
+                ThrusterForce = ThrusterForce.SetMagnitude(Mathf.Min(ThrusterForce.magnitude, acceleration));
+            }
+
+            Vector2 perpDrag = Vector2.zero; //Vector2.ClampMagnitude(perpDir * (dragMag * Mathf.Sign(perpVel)), perpVel);
+            float perpDragMag = 20f * ForwardThrusterForce / FinalAcceleration;
+            float forwardDragMag = 10f * Vector2.Dot(Velocity, Vector2.Perpendicular(thrusterDirection)) / FinalAcceleration;
+
+            //Debug.DrawRay(transform.position, perpDrag, Color.red);
+            _rb.AddForce(ThrusterForce + perpDrag);
+            Vector2 velWithNoPerpForce = forwardDir * Vector2.Dot(Velocity, forwardDir);
+            Vector2 velWithNoForwardForce = perpDir * Vector2.Dot(Velocity, perpDir);
+            if (GameControls.FollowTarget.IsHeld)
+                _rb.velocity = Vector2.MoveTowards(_rb.velocity, velWithNoPerpForce, perpDragMag * Time.fixedDeltaTime);
+            // else if (driftMode)
+            //    _rb.velocity = Vector2.MoveTowards(_rb.velocity, velWithNoForwardForce, forwardDragMag * Time.fixedDeltaTime);
+        }
+
+        private void SetTargets()
+        {
             _targetAimPos = Utils.WorldMousePos;
             if (GameControls.FollowTarget.IsHeld)
                 _targetMovePos = _targetAimPos;
             else
                 _targetMovePos = transform.position;
+            
+            _clampedTargetMovePos = Utils.ClampVectorInRadius(_targetMovePos, transform.position,
+                TARGET_POS_CLAMP_RADIUS);
+        }
 
+        private void ManageRotation()
+        {
             Vector2 desiredDir = (_targetAimPos - (Vector2) transform.position).normalized;
             //float desiredAngleChange = Vector2.SignedAngle(_spriteTransform.right, desiredDir);
             //float desiredAngleSpeed = _DEFAULT_MAX_ROTATE_SPEED;
             //float angleAcceleration = _DEFAULT_ROTATE_ACCELERATION;
             //float angleForce =(desiredAngleSpeed - _angularVelocity) * angleAcceleration;
             
-                 //Mathf.Max(angleAcceleration - _angularVelocity, Mathf.Abs(angleAcceleration)) * 
-                  //             Mathf.Sign(angleAcceleration);
+            //Mathf.Max(angleAcceleration - _angularVelocity, Mathf.Abs(angleAcceleration)) * 
+            //             Mathf.Sign(angleAcceleration);
 
             //_angularVelocity += angleForce;
             
@@ -139,76 +221,10 @@ namespace _Project.Codebase
             float desiredAngle = Utils.DirectionToAngle(desiredDir);
             _spriteTransform.eulerAngles = new Vector3(_spriteTransform.eulerAngles.x, _spriteTransform.eulerAngles.y,
                 Mathf.MoveTowardsAngle(_spriteTransform.eulerAngles.z, desiredAngle, 
-                   _DEFAULT_MAX_ROTATE_SPEED * Time.fixedDeltaTime));
+                    _DEFAULT_MAX_ROTATE_SPEED * Time.fixedDeltaTime));
 
-            //Debug.Log((_oldAngle - _spriteTransform.eulerAngles.z) / Time.fixedDeltaTime);
-            _oldAngle = _spriteTransform.eulerAngles.z;
-
-            //Debug.Log(angleVelocity);
-            
-            _clampedTargetMovePos = Utils.ClampVectorInRadius(_targetMovePos, transform.position,
-                TARGET_POS_CLAMP_RADIUS);
-
-            float desiredSpeed = FinalMaxSpeed * (_clampedTargetMovePos - (Vector2)transform.position).magnitude / TARGET_POS_CLAMP_RADIUS;
-
-            Vector2 thrusterDirection = _spriteTransform.right;
-            DesiredThrusterVelocity = thrusterDirection * desiredSpeed;
-            Vector2 desiredToVelDiff = DesiredThrusterVelocity - Velocity;
-            
-            float diffDot = Vector2.Dot(desiredToVelDiff.normalized, thrusterDirection);
-            float dot = Vector2.Dot(DesiredThrusterVelocity, thrusterDirection);
-            float acceleration = GameControls.FollowTarget.IsHeld ? FinalAcceleration : _DEFAULT_BACKWARD_ACCELERATION;//Mathf.Clamp01(diffDot) * FinalAcceleration + Mathf.Clamp(diffDot, -1f, 0f) * _DEFAULT_BACKWARD_ACCELERATION;
-            //float driftAcceleration = 
-            //    Mathf.Clamp01(diffDot) * FinalAcceleration + Mathf.Clamp(diffDot, -1f, 0f) * _DEFAULT_BACKWARD_ACCELERATION;
-            
-            Vector2 forwardDir = _spriteTransform.right;
-            Vector2 perpDir = Vector2.Perpendicular(forwardDir);
-                
-            float perpVel = Vector2.Dot(Velocity, perpDir);
-            float forwardVel = Vector2.Dot(Velocity, forwardDir);
-
-            float perpVelDiff = Vector2.Dot(desiredToVelDiff, perpDir);
-            float forwardVelDiff = Vector2.Dot(desiredToVelDiff, forwardDir);
-            
-            bool driftMode = !GameControls.FollowTarget.IsHeld && Mathf.Abs(diffDot) < .4f;
-            //Debug.Log($"dot: {dot}, diffDot: {diffDot}, forwardVelDiff: {forwardVelDiff}, drift: {driftMode}, artificial a: {ArtificialThrusterForce}, a: {acceleration}");
-            
-            if (GameControls.DisableThrusters.IsHeld)
-                ThrusterForce = Vector2.zero;
-            else
-            {
-                float perpForce = perpVelDiff * acceleration;//(driftMode ? 0f : acceleration);
-                float forwardForce = forwardVelDiff * acceleration;//(driftMode ? acceleration : acceleration);
-
-                ThrusterForce = perpDir * perpForce + forwardDir * forwardForce;
-                
-                //Debug.DrawRay(transform.position, perpDir * perpVel, Color.white);
-                //Debug.DrawRay(transform.position, forwardDir * forwardVel, Color.white);
-                
-                Debug.DrawRay(transform.position, perpDir * perpForce, Color.red);
-                Debug.DrawRay(transform.position, forwardDir * forwardForce, Color.red);
-                
-                //ThrusterForce = (DesiredThrusterVelocity - Velocity) * acceleration;
-                ThrusterForce = ThrusterForce.SetMagnitude(Mathf.Min(ThrusterForce.magnitude, acceleration));
-            }
-
-            Vector2 perpDrag = Vector2.zero;//Vector2.ClampMagnitude(perpDir * (dragMag * Mathf.Sign(perpVel)), perpVel);
-            float perpDragMag = 20f * ForwardThrusterForce / FinalAcceleration;
-            float forwardDragMag = 10f * Vector2.Dot(Velocity, Vector2.Perpendicular(thrusterDirection)) / FinalAcceleration;
-            
-            //Debug.DrawRay(transform.position, perpDrag, Color.red);
-            _rb.AddForce(ThrusterForce + perpDrag);
-            Vector2 velWithNoPerpForce = forwardDir * Vector2.Dot(Velocity, forwardDir);
-            Vector2 velWithNoForwardForce = perpDir * Vector2.Dot(Velocity, perpDir);
-            if (GameControls.FollowTarget.IsHeld)
-                _rb.velocity = Vector2.MoveTowards(_rb.velocity, velWithNoPerpForce, perpDragMag * Time.fixedDeltaTime);
-           // else if (driftMode)
-            //    _rb.velocity = Vector2.MoveTowards(_rb.velocity, velWithNoForwardForce, forwardDragMag * Time.fixedDeltaTime);
-            Stamina = Mathf.Clamp(
-                Stamina + (pressingSprint ? -_DEFAULT_STAMINA_DECAY_RATE : _DEFAULT_STAMINA_RECOVERY_RATE) * Time.fixedDeltaTime, 0f,
-                MaxStamina);
         }
-
+        
         private void HandleThrusterFX()
         {
              int thrusterSpawnRate = (int)(30f * (DesiredForwardThrusterForce / FinalMaxSpeed));
@@ -230,11 +246,6 @@ namespace _Project.Codebase
             _tractorBeam.firing = GameControls.FireTractorBeam.IsHeld;
         }
 
-        private void OnGUI()
-        {
-            
-        }
-
         private void OnDrawGizmos()
         {
             Handles.Label(transform.position + new Vector3(-1.125f, 0f, 0f), 
@@ -250,6 +261,34 @@ namespace _Project.Codebase
             Gizmos.DrawWireSphere(_targetMovePos, .25f);
             Gizmos.DrawWireSphere(_clampedTargetMovePos, .25f);
             
+        }
+
+        public void CollectCollectable(ICollectable collectable)
+        {
+            collectable.Collect();
+        }
+
+        public void AttractAndTryCollectCollectables()
+        {
+            Vector2 attractionSource = transform.position;
+            foreach (IAttractableCollectable collectable in IAttractableCollectable.attractableCollectables)
+            {
+                Vector2 collectableToPlayerDir = attractionSource - collectable.Position;
+                float dist = collectableToPlayerDir.magnitude;
+                if (dist < collectable.PickUpDistance)
+                {
+                    CollectCollectable(collectable);
+                    continue;
+                }
+                if (dist > collectable.AttractionDistance)
+                    continue;
+
+                float maxSpeed = 5f;
+                float attractionStrength = maxSpeed * Mathf.Exp(-dist * 2f / collectable.AttractionDistance);
+                collectable.Velocity = Vector2.MoveTowards(collectable.Velocity, 
+                    collectableToPlayerDir.normalized * maxSpeed, 
+                    attractionStrength * Time.fixedDeltaTime);
+            }
         }
     }
 }

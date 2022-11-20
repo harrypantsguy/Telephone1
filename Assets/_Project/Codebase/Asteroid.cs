@@ -3,7 +3,6 @@ using System.Linq;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
-using Random = UnityEngine.Random;
 
 namespace _Project.Codebase
 {
@@ -182,8 +181,16 @@ namespace _Project.Codebase
             var scoreIncrease = Instantiate(_scoreIncreasePrefab, _rb.position, Quaternion.identity).GetComponent<ScoreIncreaseUI>();
             scoreIncrease.SetIncrease(1);
 
-            var debris = Instantiate(_debrisParticlesPrefab, transform.position, Quaternion.identity);
-            Destroy(debris, _debrisParticlesPrefab.GetComponent<ParticleSystem>().main.duration);
+            int numDrops = Random.Range(3, 6);
+            for (int i = 0; i < numDrops; i++)
+            {
+                Vector2 spawnPos = (Vector2) transform.position + Random.insideUnitCircle * Radius;
+                DistanceCollectable collectable = DistanceCollectable.CreateCollectable(spawnPos, Vector3.zero);
+                collectable.Velocity = (spawnPos - (Vector2) transform.position).normalized * (8f * Time.fixedDeltaTime);
+            }
+            
+            //var debris = Instantiate(_debrisParticlesPrefab, transform.position, Quaternion.identity);
+            //Destroy(debris, _debrisParticlesPrefab.GetComponent<ParticleSystem>().main.duration);
             Destroy(gameObject);
         }
 

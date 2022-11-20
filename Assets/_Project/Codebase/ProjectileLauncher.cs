@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices.WindowsRuntime;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace _Project.Codebase
 {
@@ -18,6 +17,7 @@ namespace _Project.Codebase
             
             _lastFireTime = Time.time;
             Projectile projectile = Instantiate(_projectileFab).GetComponent<Projectile>();
+            projectile.transform.position = transform.position;
             projectile.transform.right = transform.right;
             projectile.speed = launchSpeed;
         }

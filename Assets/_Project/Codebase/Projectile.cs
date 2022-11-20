@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace _Project.Codebase
 {
@@ -36,6 +35,12 @@ namespace _Project.Codebase
                 newPosition = (Vector2)transform.position + Velocity;
 
             transform.position = newPosition;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(transform.position, radius);
         }
     }
 }

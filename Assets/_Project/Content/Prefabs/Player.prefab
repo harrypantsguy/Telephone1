@@ -57,6 +57,7 @@ MonoBehaviour:
   _spriteTransform: {fileID: 350875437128058206}
   _stasisBarrier: {fileID: 4493613258007059890}
   _miningBeam: {fileID: 250670086044734651}
+  _projectileLauncher: {fileID: 0}
   _leftThrusterVfx: {fileID: 2730495454501718353}
   _rightThrusterVfx: {fileID: 5547291489462017996}
   <MaxSpeedMultiplier>k__BackingField: 1
@@ -1484,9 +1485,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2faf313118240068e570c601e61b50d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _projectileFab: {fileID: 0}
-  fireDelay: 0
-  launchSpeed: 0
+  _projectileFab: {fileID: 2462713536071795804, guid: 44781b5a97d7a764d8c14da42e4427b9, type: 3}
+  fireDelay: 0.125
+  launchSpeed: 5
 --- !u!1 &8041594819611626886
 GameObject:
   m_ObjectHideFlags: 0
